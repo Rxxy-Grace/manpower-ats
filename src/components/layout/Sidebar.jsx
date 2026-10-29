@@ -240,23 +240,15 @@ export default function Sidebar() {
       </div>
 
       {/* Footer — Current User Session */}
-      <div className="px-3 py-3 border-t border-gray-800 bg-gray-950/60">
+      <div className="px-4 py-3.5 border-t border-gray-800 bg-gray-950/60">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
             {currentUser?.avatar || 'HY'}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-white truncate">{currentUser?.name || 'Daw Hnin Yu Maw'}</p>
-            <p className="text-[10px] text-blue-300 truncate">{userRoleConfig?.badge} · {currentUser?.branch || 'ALL'}</p>
+            <p className="text-[10px] text-gray-400 truncate">{currentUser?.title || 'Managing Director'}</p>
           </div>
-          <button
-            type="button"
-            onClick={logout}
-            title="Lock session & sign out"
-            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer"
-          >
-            <LogOut size={15} />
-          </button>
         </div>
       </div>
     </aside>

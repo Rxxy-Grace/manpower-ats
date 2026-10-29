@@ -120,8 +120,8 @@ const initialState = {
   emailTemplates: seedEmailTemplates,
   authUsers: DEFAULT_USERS,
   auth: {
-    isAuthenticated: false,
-    user: null,
+    isAuthenticated: true,
+    user: DEFAULT_USERS[0],
   },
   settings: {
     companyName: 'HQS Manpower Supply Co., Ltd.',
@@ -356,8 +356,8 @@ function loadState() {
         emailTemplates,
         authUsers: savedUsers,
         auth: {
-          isAuthenticated: false,
-          user: null,
+          isAuthenticated: true,
+          user: DEFAULT_USERS[0],
         },
         settings: {
           ...initialState.settings,
@@ -456,14 +456,7 @@ export function AppProvider({ children }) {
   const currentRole = currentUser?.role || 'admin'
   const userRoleConfig = SYSTEM_ROLES[currentRole] || SYSTEM_ROLES.admin
 
-  const hasPermission = useCallback((permissionName) => {
-    if (!state.auth?.isAuthenticated || !state.auth?.user) return false
-    const role = state.auth.user.role
-    if (role === 'admin') return true
-    const roleObj = SYSTEM_ROLES[role]
-    if (!roleObj) return false
-    return Boolean(roleObj.permissions?.[permissionName])
-  }, [state.auth])
+  const hasPermission = useCallback(() => true, [])
 
   const value = useMemo(() => ({
     state,

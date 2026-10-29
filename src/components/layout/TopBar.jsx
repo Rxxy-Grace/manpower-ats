@@ -222,35 +222,19 @@ export default function TopBar() {
       )}
 
       <div className="ml-auto flex items-center gap-3">
-        {/* User Role & Profile Pill */}
         {currentUser && (
           <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
             <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
               {currentUser.avatar}
             </div>
             <div className="hidden sm:block text-left">
-              <div className="flex items-center gap-1.5 leading-tight">
-                <span className="text-xs font-bold text-gray-900">{currentUser.name}</span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${userRoleConfig.badgeColor}`}>
-                  {userRoleConfig.badge}
-                </span>
-              </div>
+              <span className="text-xs font-bold text-gray-900 block leading-tight">{currentUser.name}</span>
               <p className="text-[10px] text-gray-500 leading-none mt-0.5">
-                {currentUser.branch === 'ALL' ? 'All Branches' : `${currentUser.branch} Branch`}
+                {currentUser.title || 'Managing Director'}
               </p>
             </div>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={logout}
-          title="Sign out & lock software"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:text-red-700 hover:bg-red-50 border border-gray-200 hover:border-red-200 rounded-lg transition-colors cursor-pointer"
-        >
-          <LogOut size={14} />
-          <span className="hidden md:inline">Lock / Sign Out</span>
-        </button>
 
         <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer">
           <Bell size={18} />

@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
 import Sidebar from './components/layout/Sidebar'
 import TopBar from './components/layout/TopBar'
-import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Jobs from './pages/Jobs'
 import JobDetail from './pages/JobDetail'
@@ -14,44 +13,31 @@ import Team from './pages/Team'
 import EmailTemplates from './pages/EmailTemplates'
 import Settings from './pages/Settings'
 
-function AppShell() {
-  const { state } = useApp()
-  const isAuthenticated = state.auth?.isAuthenticated
-
-  if (!isAuthenticated) {
-    return <Login />
-  }
-
-  return (
-    <BrowserRouter>
-      <div className="flex h-screen overflow-hidden bg-gray-50">
-        <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <TopBar />
-          <main className="flex-1 overflow-y-auto scrollbar-thin">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/:id" element={<JobDetail />} />
-              <Route path="/candidates" element={<Candidates />} />
-              <Route path="/candidates/:id" element={<CandidateDetail />} />
-              <Route path="/interviews" element={<Interviews />} />
-              <Route path="/team" element={<Team />} />
-              <Route path="/templates" element={<EmailTemplates />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
-    </BrowserRouter>
-  )
-}
-
 export default function App() {
   return (
     <AppProvider>
-      <AppShell />
+      <BrowserRouter>
+        <div className="flex h-screen overflow-hidden bg-gray-50">
+          <Sidebar />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <TopBar />
+            <main className="flex-1 overflow-y-auto scrollbar-thin">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/jobs/:id" element={<JobDetail />} />
+                <Route path="/candidates" element={<Candidates />} />
+                <Route path="/candidates/:id" element={<CandidateDetail />} />
+                <Route path="/interviews" element={<Interviews />} />
+                <Route path="/team" element={<Team />} />
+                <Route path="/templates" element={<EmailTemplates />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+          </div>
+        </div>
+      </BrowserRouter>
     </AppProvider>
   )
 }
