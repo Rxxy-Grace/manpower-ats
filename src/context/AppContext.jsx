@@ -419,8 +419,16 @@ export function AppProvider({ children }) {
     }
   }, [state.auth])
 
-  const login = useCallback((userId, pin) => {
-    const user = (state.authUsers || DEFAULT_USERS).find(u => u.id === userId)
+  const login = useCallback((identifier, pin) => {
+    const raw = String(identifier || '').trim().toLowerCase()
+    const user = (state.authUsers || DEFAULT_USERS).find(u =>
+      u.id.toLowerCase() === raw ||
+      u.email.toLowerCase() === raw ||
+      u.name.toLowerCase().includes(raw) ||
+      (raw === 'admin' && u.role === 'admin') ||
+      (raw === 'recruiter' && u.role === 'recruiter') ||
+      (raw === 'client' && u.role === 'client_reviewer')
+    )
     if (!user) return false
     const expectedPin = user.pin || '1234'
     if (String(pin).trim() !== String(expectedPin).trim()) {
