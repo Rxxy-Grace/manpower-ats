@@ -60,6 +60,10 @@ export default function Sidebar() {
   }
 
   const handleClientClick = (client) => {
+    if (client === 'ALL') {
+      dispatch({ type: 'SET_CLIENT_FILTER', payload: 'ALL' })
+      return
+    }
     const next = currentClient === client ? 'ALL' : client
     dispatch({ type: 'SET_CLIENT_FILTER', payload: next })
   }
@@ -161,11 +165,14 @@ export default function Sidebar() {
         </div>
         <div className="space-y-1">
           {[
+            { id: 'ALL', name: 'All Clients', sub: 'All Corporate Partners' },
             { id: 'PTTEP', name: 'PTTEP', sub: 'Offshore Exploration' },
             { id: 'SLB', name: 'SLB (Schlumberger)', sub: 'Oilfield Services' },
             { id: 'POSCO', name: 'POSCO International', sub: 'Gas Pipeline' },
           ].map(client => {
-            const count = state.jobs.filter(j => j.clientCompany === client.id).length
+            const count = client.id === 'ALL'
+              ? state.jobs.length
+              : state.jobs.filter(j => j.clientCompany === client.id).length
             const isSelected = currentClient === client.id
             return (
               <button
