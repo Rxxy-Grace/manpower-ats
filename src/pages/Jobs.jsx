@@ -9,8 +9,10 @@ import JobForm from '../components/forms/JobForm'
 import { DEPARTMENTS, JOB_STATUSES, BRANCHES, CLIENT_COMPANIES } from '../data/seedData'
 
 export default function Jobs() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, hasPermission } = useApp()
   const navigate = useNavigate()
+  const canManageJobs = hasPermission('canManageJobs')
+  const canViewSalary = hasPermission('canViewSalary')
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [showModal, setShowModal] = useState(false)
@@ -77,6 +79,7 @@ export default function Jobs() {
   }
 
   const formatSalary = (salary) => {
+    if (!canViewSalary) return '🔒 Confidential'
     if (!salary?.min && !salary?.max) return 'Salary not specified'
     const cur = salary.currency || 'MMK'
     const suffix = salary.rateType === 'Daily Rate' ? '/ day' : '/ mo'
@@ -108,9 +111,11 @@ export default function Jobs() {
             {filtered.length} shown · {state.jobs.length} total across all clients & branches
           </p>
         </div>
-        <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
-          Post a Job
-        </Button>
+        {canManageJobs && (
+          <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
+            Post a Job
+          </Button>
+        )}
       </div>
 
       {/* Active Filter Banner */}

@@ -11,8 +11,10 @@ import BatchFolderUploadModal from '../components/forms/BatchFolderUploadModal'
 import { PIPELINE_STAGES, SOURCES, CLIENT_COMPANIES, BRANCHES } from '../data/seedData'
 
 export default function Candidates() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, hasPermission } = useApp()
   const navigate = useNavigate()
+  const canManage = hasPermission('canManageCandidates')
+  const canDelete = hasPermission('canDeleteCandidates')
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [showModal, setShowModal] = useState(false)
@@ -149,17 +151,21 @@ export default function Candidates() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            icon={<FolderUp size={15} />}
-            onClick={() => setShowBatchFolderModal(true)}
-            title="Batch import all CVs from a folder"
-          >
-            Upload Folder
-          </Button>
-          <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
-            Add Candidate
-          </Button>
+          {canManage && (
+            <>
+              <Button
+                variant="secondary"
+                icon={<FolderUp size={15} />}
+                onClick={() => setShowBatchFolderModal(true)}
+                title="Batch import all CVs from a folder"
+              >
+                Upload Folder
+              </Button>
+              <Button icon={<Plus size={16} />} onClick={() => setShowModal(true)}>
+                Add Candidate
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -399,22 +405,26 @@ export default function Candidates() {
                     </td>
                     <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setEditingCandidate(c)}
-                          title={`Edit ${c.firstName} ${c.lastName}`}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200 cursor-pointer"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(c)}
-                          title={`Delete ${c.firstName} ${c.lastName}`}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200 cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCandidate(c)}
+                            title={`Edit ${c.firstName} ${c.lastName}`}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-200 cursor-pointer"
+                          >
+                            <Edit size={14} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(c)}
+                            title={`Delete ${c.firstName} ${c.lastName}`}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200 cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

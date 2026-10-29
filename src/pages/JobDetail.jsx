@@ -12,7 +12,11 @@ import KanbanBoard from '../components/ui/KanbanBoard'
 export default function JobDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { state, dispatch } = useApp()
+  const { state, dispatch, hasPermission } = useApp()
+  const canManageJobs = hasPermission('canManageJobs')
+  const canDeleteJobs = hasPermission('canDeleteJobs')
+  const canViewSalary = hasPermission('canViewSalary')
+  const canManageCandidates = hasPermission('canManageCandidates')
   const [showEditModal, setShowEditModal] = useState(false)
   const [showAddCandidate, setShowAddCandidate] = useState(false)
   const [activeTab, setActiveTab] = useState('pipeline')
@@ -48,6 +52,7 @@ export default function JobDetail() {
   }
 
   const formatSalary = (s) => {
+    if (!canViewSalary) return '🔒 Confidential (Client Masked)'
     if (!s?.min && !s?.max) return 'Not specified'
     const cur = s.currency || 'MMK'
     const rate = s.rateType === 'Daily Rate' ? 'Daily' : 'Monthly'
@@ -103,12 +108,16 @@ export default function JobDetail() {
             <p className="text-gray-500 mt-0.5 font-medium">{job.department}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" icon={<Edit size={14} />} onClick={() => setShowEditModal(true)}>
-              Edit Job
-            </Button>
-            <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete}>
-              Delete
-            </Button>
+            {canManageJobs && (
+              <Button variant="secondary" size="sm" icon={<Edit size={14} />} onClick={() => setShowEditModal(true)}>
+                Edit Job
+              </Button>
+            )}
+            {canDeleteJobs && (
+              <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete}>
+                Delete
+              </Button>
+            )}
           </div>
         </div>
 

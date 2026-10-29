@@ -16,20 +16,45 @@ import {
   BarChart3,
   Layers,
   CheckCircle2,
+  Lock,
+  KeyRound,
+  ShieldCheck,
 } from 'lucide-react'
-import { useApp } from '../context/AppContext'
+import { useApp, SYSTEM_ROLES } from '../context/AppContext'
 import Button from '../components/ui/Button'
 import { BRANCHES } from '../data/seedData'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { syncLocalStateToSupabase } from '../services/supabaseSync'
 
 export default function Settings() {
-  const { state, dispatch } = useApp()
+  const { state, dispatch, currentUser, userRoleConfig, hasPermission, updateUserPin } = useApp()
+  const canDangerZone = hasPermission('canAccessDangerZone')
+
   const [form, setForm] = useState({ ...state.settings })
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
   const [syncError, setSyncError] = useState('')
+
+  // PIN change state
+  const [newPin, setNewPin] = useState('')
+  const [pinTargetUser, setPinTargetUser] = useState(currentUser?.id || 'u_admin')
+  const [pinSuccess, setPinSuccess] = useState('')
+  const [pinError, setPinError] = useState('')
+
+  const handleUpdatePin = (e) => {
+    e.preventDefault()
+    setPinError('')
+    setPinSuccess('')
+    if (!newPin.trim() || newPin.trim().length < 4) {
+      setPinError('PIN must be at least 4 digits/characters.')
+      return
+    }
+    updateUserPin(pinTargetUser, newPin.trim())
+    setPinSuccess(`PIN successfully updated for ${state.authUsers?.find(u => u.id === pinTargetUser)?.name}!`)
+    setNewPin('')
+    setTimeout(() => setPinSuccess(''), 3000)
+  }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -448,18 +473,95 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
             </dl>
           </div>
 
+          {/* Security & PIN Management */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
+              <ShieldCheck size={18} className="text-blue-600" />
+              <h3 className="text-sm font-bold text-gray-900">Security & PIN Management</h3>
+            </div>
+
+            <div className="space-y-3">
+              <div className="text-xs text-gray-600">
+                Logged in as: <strong className="text-gray-900">{currentUser?.name}</strong>{' '}
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${userRoleConfig?.badgeColor}`}>
+                  {userRoleConfig?.badge}
+                </span>
+              </div>
+
+              {/* Change PIN Form */}
+              <form onSubmit={handleUpdatePin} className="space-y-2.5 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-bold text-gray-700">
+                  Update Security PIN
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  <select
+                    value={pinTargetUser}
+                    onChange={e => setPinTargetUser(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs bg-white text-gray-800"
+                  >
+                    {(state.authUsers || []).map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={16}
+                      value={newPin}
+                      onChange={e => setNewPin(e.target.value)}
+                      placeholder="New PIN (e.g. 5678)"
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-xs font-mono"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      Save PIN
+                    </button>
+                  </div>
+                </div>
+
+                {pinSuccess && (
+                  <p className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
+                    ✓ {pinSuccess}
+                  </p>
+                )}
+                {pinError && (
+                  <p className="text-[11px] text-red-600 font-semibold bg-red-50 px-2 py-1 rounded">
+                    ⚠ {pinError}
+                  </p>
+                )}
+              </form>
+            </div>
+          </div>
+
           {/* Danger Zone */}
           <div className="bg-red-50/60 rounded-2xl border border-red-200 p-5 space-y-3">
             <div className="flex items-center gap-2 text-red-800">
               <ShieldAlert size={17} className="text-red-600" />
               <h3 className="text-sm font-bold">System Danger Zone</h3>
+              {!canDangerZone && (
+                <span className="text-[10px] bg-red-200 text-red-800 font-bold px-2 py-0.5 rounded-full ml-auto">
+                  Admin Only
+                </span>
+              )}
             </div>
             <p className="text-xs text-red-700/90 leading-relaxed">
               Reset all local recruitment data back to the clean initial demo dataset. This action cannot be undone.
             </p>
-            <Button variant="danger" size="sm" icon={<RefreshCw size={13} />} onClick={handleResetData}>
-              Reset to Clean Demo Data
-            </Button>
+            {canDangerZone ? (
+              <Button variant="danger" size="sm" icon={<RefreshCw size={13} />} onClick={handleResetData}>
+                Reset to Clean Demo Data
+              </Button>
+            ) : (
+              <div className="p-2.5 bg-red-100/60 border border-red-200 rounded-xl text-xs text-red-800 font-medium flex items-center gap-2">
+                <Lock size={14} className="shrink-0 text-red-600" />
+                <span>Locked. Danger Zone requires Administrator permission.</span>
+              </div>
+            )}
           </div>
         </div>
 

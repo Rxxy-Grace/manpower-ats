@@ -9,9 +9,8 @@ import {
   Mail,
   Settings,
   Building2,
-  ChevronRight,
-  Filter,
-  X,
+  Lock,
+  LogOut,
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 
@@ -20,18 +19,17 @@ const navItems = [
   { to: '/jobs', icon: Briefcase, label: 'Jobs' },
   { to: '/candidates', icon: Users, label: 'Candidates' },
   { to: '/interviews', icon: Calendar, label: 'Interviews' },
-  { to: '/team', icon: UserCircle, label: 'Team' },
-  { to: '/templates', icon: Mail, label: 'Email Templates' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/team', icon: UserCircle, label: 'Team', perm: 'canManageTeam' },
+  { to: '/templates', icon: Mail, label: 'Email Templates', perm: 'canManageTemplates' },
+  { to: '/settings', icon: Settings, label: 'Settings', perm: 'canManageSettings' },
 ]
 
 export default function Sidebar() {
-  const { state, dispatch } = useApp()
-  const currentUser = state.team.find(t => t.id === state.settings.currentUser) || state.team[0]
+  const { state, dispatch, logout, currentUser, userRoleConfig, hasPermission } = useApp()
+  const canAllBranches = hasPermission('canAccessAllBranches')
 
   const currentBranch = state.settings.currentBranch || 'ALL'
   const currentClient = state.settings.currentClient || 'ALL'
-  const isFiltered = currentBranch !== 'ALL' || currentClient !== 'ALL'
 
   // Filter jobs matching current branch & client
   const filteredJobs = state.jobs.filter(j => {
@@ -54,6 +52,9 @@ export default function Sidebar() {
   const branchColor = branchColors[currentBranch] || 'bg-blue-600'
 
   const handleBranchClick = (branch) => {
+    if (!canAllBranches && currentUser?.branch && branch !== currentUser.branch) {
+      return // locked to assigned branch
+    }
     const next = currentBranch === branch ? 'ALL' : branch
     dispatch({ type: 'SET_BRANCH_FILTER', payload: next })
   }
@@ -63,12 +64,13 @@ export default function Sidebar() {
     dispatch({ type: 'SET_CLIENT_FILTER', payload: next })
   }
 
-  const handleResetFilters = () => {
-    dispatch({ type: 'RESET_FILTERS' })
-  }
+  const visibleNavItems = navItems.filter(item => {
+    if (!item.perm) return true
+    return hasPermission(item.perm)
+  })
 
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col h-screen sticky top-0 shrink-0">
+    <aside className="w-64 bg-gray-900 text-white flex flex-col h-screen sticky top-0 shrink-0 select-none">
       {/* Logo & Header */}
       <div className="px-5 py-4 border-b border-gray-800">
         <div className="flex items-center gap-3">
@@ -86,8 +88,10 @@ export default function Sidebar() {
         {/* Branch switcher buttons */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Branch Filter</span>
-            {currentBranch !== 'ALL' && (
+            <span className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+              Branch Filter {!canAllBranches && <Lock size={10} className="text-amber-400" />}
+            </span>
+            {currentBranch !== 'ALL' && canAllBranches && (
               <button
                 type="button"
                 onClick={() => handleBranchClick('ALL')}
@@ -96,25 +100,33 @@ export default function Sidebar() {
                 Reset
               </button>
             )}
+            {!canAllBranches && (
+              <span className="text-[10px] text-amber-300/90 font-bold">Assigned</span>
+            )}
           </div>
           <div className="grid grid-cols-4 gap-1">
             {['ALL', 'HQS', 'AQS', 'QSL'].map(branch => {
+              const isAssigned = canAllBranches || (currentUser?.branch === branch)
               const isActive = currentBranch === branch
               const count = branch === 'ALL'
                 ? state.jobs.length
                 : state.jobs.filter(j => j.branch === branch).length
+
               return (
                 <button
                   key={branch}
                   type="button"
+                  disabled={!isAssigned}
                   onClick={() => handleBranchClick(branch)}
-                  title={`Filter by ${branch === 'ALL' ? 'All branches' : branch} (${count} jobs)`}
-                  className={`py-1.5 px-1 rounded-lg font-bold text-xs transition-all flex flex-col items-center justify-center cursor-pointer ${
-                    isActive
-                      ? branch === 'ALL'
-                        ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-400'
-                        : `${branchColors[branch]} text-white shadow-md ring-2 ring-white/30`
-                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+                  title={!isAssigned ? `Restricted to ${currentUser?.branch} branch` : `Filter by ${branch === 'ALL' ? 'All branches' : branch} (${count} jobs)`}
+                  className={`py-1.5 px-1 rounded-lg font-bold text-xs transition-all flex flex-col items-center justify-center ${
+                    !isAssigned
+                      ? 'opacity-30 cursor-not-allowed bg-gray-800/40 text-gray-500'
+                      : 'cursor-pointer ' + (isActive
+                        ? branch === 'ALL'
+                          ? 'bg-slate-700 text-white shadow-md ring-2 ring-slate-400'
+                          : `${branchColors[branch]} text-white shadow-md ring-2 ring-white/30`
+                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white')
                   }`}
                 >
                   <div className="flex items-center gap-1">
@@ -141,43 +153,38 @@ export default function Sidebar() {
             <button
               type="button"
               onClick={() => handleClientClick('ALL')}
-              className="text-[10px] text-indigo-400 hover:text-indigo-300 underline cursor-pointer"
+              className="text-[10px] text-blue-400 hover:text-blue-300 underline cursor-pointer"
             >
-              Reset
+              All Clients
             </button>
           )}
         </div>
-        <div className="grid grid-cols-4 gap-1">
-          {['ALL', 'PTTEP', 'SLB', 'POSCO'].map(client => {
-            const isActive = currentClient === client
-            const count = client === 'ALL'
-              ? state.jobs.length
-              : state.jobs.filter(j => j.clientCompany === client).length
-            const activeStyles = {
-              ALL: 'bg-slate-700 text-white shadow-md ring-2 ring-slate-400',
-              PTTEP: 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400/60',
-              SLB: 'bg-cyan-600 text-white shadow-md ring-2 ring-cyan-400/60',
-              POSCO: 'bg-amber-600 text-white shadow-md ring-2 ring-amber-400/60',
-            }
+        <div className="space-y-1">
+          {[
+            { id: 'PTTEP', name: 'PTTEP', sub: 'Offshore Exploration' },
+            { id: 'SLB', name: 'SLB (Schlumberger)', sub: 'Oilfield Services' },
+            { id: 'POSCO', name: 'POSCO International', sub: 'Gas Pipeline' },
+          ].map(client => {
+            const count = state.jobs.filter(j => j.clientCompany === client.id).length
+            const isSelected = currentClient === client.id
             return (
               <button
-                key={client}
+                key={client.id}
                 type="button"
-                onClick={() => handleClientClick(client)}
-                title={`Filter by ${client === 'ALL' ? 'All Clients' : client} (${count} jobs)`}
-                className={`py-1.5 px-1 rounded-lg font-bold text-xs transition-all flex flex-col items-center justify-center cursor-pointer ${
-                  isActive
-                    ? activeStyles[client]
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700/60'
+                onClick={() => handleClientClick(client.id)}
+                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                  isSelected
+                    ? 'bg-blue-600/30 border border-blue-500/50 text-blue-200'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/60'
                 }`}
               >
-                <div className="flex items-center gap-1">
-                  {client !== 'ALL' && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-white animate-pulse' : 'bg-emerald-400'}`} />
-                  )}
-                  <span className="truncate">{client}</span>
+                <div className="min-w-0 pr-2">
+                  <p className={`font-semibold truncate ${isSelected ? 'text-white' : ''}`}>{client.name}</p>
+                  <p className="text-[10px] text-gray-400 leading-none truncate">{client.sub}</p>
                 </div>
-                <span className={`text-[9px] ${isActive ? 'text-white/90' : 'text-gray-500'}`}>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
+                  isSelected ? 'bg-blue-500 text-white font-bold' : 'bg-gray-800 text-gray-400'
+                }`}>
                   {count}
                 </span>
               </button>
@@ -186,34 +193,9 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Active Filter Pill */}
-      {isFiltered && (
-        <div className="mx-3 mt-3 px-3 py-2 bg-blue-950/80 border border-blue-700/60 rounded-lg flex items-center justify-between text-xs">
-          <div className="min-w-0 flex items-center gap-1.5">
-            <Filter size={12} className="text-blue-400 shrink-0" />
-            <div className="min-w-0">
-              <span className="text-[10px] uppercase font-semibold text-blue-300 block">Filtered Flow</span>
-              <p className="text-white truncate text-xs font-bold">
-                {currentBranch !== 'ALL' && <span>{currentBranch}</span>}
-                {currentBranch !== 'ALL' && currentClient !== 'ALL' && <span className="text-blue-400"> · </span>}
-                {currentClient !== 'ALL' && <span>{currentClient}</span>}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleResetFilters}
-            title="Clear all filters"
-            className="text-[10px] bg-blue-800/80 hover:bg-blue-700 text-blue-200 px-2 py-0.5 rounded cursor-pointer shrink-0 ml-1 flex items-center gap-0.5"
-          >
-            <X size={10} /> Clear
-          </button>
-        </div>
-      )}
-
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto scrollbar-thin">
-        {navItems.map(({ to, icon: Icon, label }) => (
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {visibleNavItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
@@ -257,17 +239,24 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Footer — current user */}
-      <div className="px-4 py-4 border-t border-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-            {currentUser?.avatar || 'RO'}
+      {/* Footer — Current User Session */}
+      <div className="px-3 py-3 border-t border-gray-800 bg-gray-950/60">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
+            {currentUser?.avatar || 'HY'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate">{currentUser?.name || 'Recruitment Officer'}</p>
-            <p className="text-xs text-gray-400 truncate">{currentUser?.role || 'Recruitment Officer'}</p>
+            <p className="text-xs font-bold text-white truncate">{currentUser?.name || 'Daw Hnin Yu Maw'}</p>
+            <p className="text-[10px] text-blue-300 truncate">{userRoleConfig?.badge} · {currentUser?.branch || 'ALL'}</p>
           </div>
-          <ChevronRight size={14} className="text-gray-500 shrink-0" />
+          <button
+            type="button"
+            onClick={logout}
+            title="Lock session & sign out"
+            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </aside>

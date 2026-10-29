@@ -38,7 +38,9 @@ function StarRating({ value, onChange }) {
 export default function CandidateDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { state, dispatch } = useApp()
+  const { state, dispatch, hasPermission } = useApp()
+  const canManage = hasPermission('canManageCandidates')
+  const canDelete = hasPermission('canDeleteCandidates')
   const [showEditModal, setShowEditModal] = useState(false)
   const [showInterviewModal, setShowInterviewModal] = useState(false)
   const [newNote, setNewNote] = useState('')
@@ -142,12 +144,20 @@ export default function CandidateDetail() {
 
           <div className="flex flex-col items-end gap-3">
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" icon={<Edit size={14} />} onClick={() => setShowEditModal(true)}>Edit</Button>
-              <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete}>Delete</Button>
+              {canManage && (
+                <Button variant="secondary" size="sm" icon={<Edit size={14} />} onClick={() => setShowEditModal(true)}>
+                  Edit
+                </Button>
+              )}
+              {canDelete && (
+                <Button variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={handleDelete}>
+                  Delete
+                </Button>
+              )}
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-1 text-right">Rating</p>
-              <StarRating value={candidate.rating} onChange={handleRating} />
+              <StarRating value={candidate.rating} onChange={canManage ? handleRating : undefined} />
             </div>
             <Badge variant="stage" value={candidate.stage}>{candidate.stage}</Badge>
           </div>
@@ -164,14 +174,16 @@ export default function CandidateDetail() {
               return (
                 <React.Fragment key={stage}>
                   <button
-                    onClick={() => isClickable && handleMoveStage(stage)}
+                    onClick={() => isClickable && canManage && handleMoveStage(stage)}
+                    disabled={!canManage}
+                    title={!canManage ? 'Permission required to move pipeline stage' : undefined}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-sm'
                         : isPast
                         ? 'bg-green-100 text-green-700'
                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    } ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                    } ${isClickable && canManage ? 'cursor-pointer' : 'cursor-default opacity-80'}`}
                   >
                     {stage}
                   </button>
