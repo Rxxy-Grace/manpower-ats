@@ -122,8 +122,10 @@ export default function Settings() {
   }
 
   const handleResetData = () => {
-    if (window.confirm('⚠️ Reset all data back to original HQS demo data? All local modifications will be removed.')) {
+    if (window.confirm('⚠️ Restore official real recruitment data (59 real candidates, 15 jobs)? Local cache will be refreshed.')) {
       localStorage.removeItem('hqs_ats_state')
+      localStorage.removeItem('hqs_data_version')
+      dispatch({ type: 'RESET_DEMO_DATA' })
       window.location.reload()
     }
   }

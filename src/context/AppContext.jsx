@@ -381,6 +381,12 @@ function reducer(state, action) {
       return { ...state, settings: { ...state.settings, ...action.payload } }
 
     case 'RESET_DEMO_DATA':
+      try {
+        localStorage.setItem('hqs_data_version', CURRENT_DATA_VERSION)
+        localStorage.removeItem('hqs_ats_state')
+      } catch {
+        // ignore
+      }
       return {
         ...initialState,
         jobs: seedJobs.map(normalizeJob),
@@ -388,6 +394,11 @@ function reducer(state, action) {
         interviews: seedInterviews,
         team: seedTeam,
         emailTemplates: seedEmailTemplates,
+        settings: {
+          ...initialState.settings,
+          currentBranch: 'ALL',
+          currentClient: 'ALL',
+        },
       }
 
     default:
@@ -395,20 +406,63 @@ function reducer(state, action) {
   }
 }
 
-const CURRENT_DATA_VERSION = 'hqs_data_real_v4'
+export const CURRENT_DATA_VERSION = 'hqs_manpower_real_candidates_v10'
 
 function loadState() {
   try {
-    let base = initialState
+    const storedVersion = localStorage.getItem('hqs_data_version')
     const serialized = localStorage.getItem('hqs_ats_state')
+
+    // Check if the stored cache is missing, outdated, or has dummy/stale candidate data
+    let needsFullReset = storedVersion !== CURRENT_DATA_VERSION || !serialized
+
+    if (serialized && !needsFullReset) {
+      try {
+        const parsed = JSON.parse(serialized)
+        const hasRealCandidates = Array.isArray(parsed.candidates) &&
+          parsed.candidates.length >= 50 &&
+          parsed.candidates.some(c => c.firstName === 'Kyaw' || c.lastName === 'Tun' || c.firstName === 'Aung')
+        const hasRealJobs = Array.isArray(parsed.jobs) && parsed.jobs.length >= 15
+        if (!hasRealCandidates || !hasRealJobs) {
+          needsFullReset = true
+        }
+      } catch {
+        needsFullReset = true
+      }
+    }
+
+    if (needsFullReset) {
+      try {
+        localStorage.setItem('hqs_data_version', CURRENT_DATA_VERSION)
+        localStorage.removeItem('hqs_ats_state')
+      } catch {
+        // ignore
+      }
+      return {
+        ...initialState,
+        jobs: seedJobs.map(normalizeJob),
+        candidates: seedCandidates,
+        interviews: seedInterviews,
+        team: seedTeam,
+        emailTemplates: seedEmailTemplates,
+        settings: {
+          ...initialState.settings,
+          currentBranch: 'ALL',
+          currentClient: 'ALL',
+        },
+      }
+    }
+
+    let base = initialState
     if (serialized) {
       const parsed = JSON.parse(serialized)
-      const candidates = (Array.isArray(parsed.candidates) && parsed.candidates.length > 0)
-        ? parsed.candidates
-        : seedCandidates
-      const rawJobs = (Array.isArray(parsed.jobs) && parsed.jobs.length > 0)
-        ? parsed.jobs
-        : seedJobs
+      const hasRealCandidates = Array.isArray(parsed.candidates) &&
+        parsed.candidates.length >= 50 &&
+        parsed.candidates.some(c => c.firstName === 'Kyaw' || c.lastName === 'Tun' || c.firstName === 'Aung')
+      const candidates = hasRealCandidates ? parsed.candidates : seedCandidates
+
+      const hasRealJobs = Array.isArray(parsed.jobs) && parsed.jobs.length >= 15
+      const rawJobs = hasRealJobs ? parsed.jobs : seedJobs
       const jobs = rawJobs.map(normalizeJob)
       const hasBurmese = parsed.emailTemplates?.some(t => /[\u1000-\u109F]/.test(t.body || ''))
       const emailTemplates = (!parsed.emailTemplates || parsed.emailTemplates.length === 0 || hasBurmese)
