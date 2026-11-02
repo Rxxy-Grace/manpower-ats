@@ -10,6 +10,63 @@ import InterviewForm from '../components/forms/InterviewForm'
 
 const STATUS_OPTIONS = ['All', 'Scheduled', 'Completed', 'Cancelled', 'No Show']
 
+export function resolvePanelist(id, team = []) {
+  if (!id) return null
+  if (typeof id === 'string') {
+    if (id.startsWith('hm:')) {
+      return {
+        id,
+        name: id.slice(3),
+        role: 'Hiring Manager',
+        icon: '👔',
+        badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      }
+    }
+    if (id.startsWith('rev:')) {
+      return {
+        id,
+        name: id.slice(4),
+        role: 'Reviewer (Dept Head)',
+        icon: '📑',
+        badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
+      }
+    }
+    if (id.startsWith('appr:')) {
+      return {
+        id,
+        name: id.slice(5),
+        role: 'Approval Person',
+        icon: '✍️',
+        badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      }
+    }
+    const found = team.find(t => t.id === id)
+    if (found) {
+      return {
+        id,
+        name: found.name,
+        role: found.role || 'HR Recruiter',
+        icon: '👤',
+        badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+      }
+    }
+    return {
+      id,
+      name: id,
+      role: 'Panelist',
+      icon: '👥',
+      badgeClass: 'bg-gray-50 text-gray-700 border-gray-200',
+    }
+  }
+  return {
+    id: id.id || 'id',
+    name: id.name || String(id),
+    role: id.role || 'Panelist',
+    icon: '👤',
+    badgeClass: 'bg-gray-50 text-gray-700 border-gray-200',
+  }
+}
+
 export default function Interviews() {
   const { state, dispatch } = useApp()
   const navigate = useNavigate()
@@ -34,7 +91,10 @@ export default function Interviews() {
   // Filter jobs by currentBranch and currentClient
   const filteredJobs = state.jobs.filter(j => {
     const matchBranch = currentBranch === 'ALL' || j.branch === currentBranch
-    const matchClient = currentClient === 'ALL' || j.clientCompany === currentClient
+    const matchClient = currentClient === 'ALL' ||
+      j.clientCompany === currentClient ||
+      (currentClient === 'HQS (Headquarter & Branches)' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs'))) ||
+      (currentClient === 'HQS' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs')))
     return matchBranch && matchClient
   })
   const filteredJobIds = new Set(filteredJobs.map(j => j.id))
@@ -42,7 +102,7 @@ export default function Interviews() {
   const filtered = state.interviews.filter(i => {
     const job = state.jobs.find(j => j.id === i.jobId)
     const candidate = state.candidates.find(c => c.id === i.candidateId)
-    const interviewers = i.interviewers?.map(tid => state.team.find(t => t.id === tid)).filter(Boolean) || []
+    const panelists = i.interviewers?.map(tid => resolvePanelist(tid, state.team)).filter(Boolean) || []
 
     const matchJob = filteredJobIds.has(i.jobId)
     const matchStatus = filterStatus === 'All' || i.status === filterStatus
@@ -58,12 +118,15 @@ export default function Interviews() {
         job?.code,
         job?.clientCompany,
         job?.branch,
+        job?.hiringManager,
+        job?.reviewer,
+        job?.approvalPerson,
         i.type,
         i.location,
         i.status,
         i.notes,
         i.date,
-        ...interviewers.map(m => m.name),
+        ...panelists.map(m => `${m.name} ${m.role}`),
       ].filter(Boolean).join(' ').toLowerCase()
 
       matchSearch = words.every(word => interviewText.includes(word))
@@ -261,7 +324,8 @@ export default function Interviews() {
                   {interviews.map(iv => {
                     const candidate = state.candidates.find(c => c.id === iv.candidateId)
                     const job = state.jobs.find(j => j.id === iv.jobId)
-                    const interviewers = iv.interviewers?.map(tid => state.team.find(t => t.id === tid)).filter(Boolean) || []
+                    const isInternal = job?.hiringType === 'internal' || job?.clientCompany?.toLowerCase().includes('hqs')
+                    const panelists = iv.interviewers?.map(tid => resolvePanelist(tid, state.team)).filter(Boolean) || []
 
                     return (
                       <div key={iv.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm transition-shadow">
@@ -278,14 +342,18 @@ export default function Interviews() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-semibold text-gray-900">{iv.type}</p>
                                 <Badge variant="status" value={iv.status}>{iv.status}</Badge>
-                                {job?.clientCompany && (
+                                {isInternal ? (
+                                  <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
+                                    🏢 HQS Group (Internal)
+                                  </span>
+                                ) : job?.clientCompany ? (
                                   <span className="text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                                     {job.clientCompany}
                                   </span>
-                                )}
+                                ) : null}
                                 {job?.branch && (
                                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-100 text-gray-700">
-                                    {job.branch}
+                                    {job.branch} Branch
                                   </span>
                                 )}
                               </div>
@@ -303,19 +371,38 @@ export default function Interviews() {
                                   </div>
                                 </button>
                               )}
+
                               <div className="flex items-center gap-4 mt-2 flex-wrap">
                                 <span className="flex items-center gap-1 text-xs text-gray-500">
                                   <MapPin size={11} /> {iv.location}
                                 </span>
-                                {interviewers.length > 0 && (
-                                  <span className="flex items-center gap-1 text-xs text-gray-500">
-                                    <Clock size={11} />
-                                    {interviewers.map(m => m.name).join(', ')}
-                                  </span>
-                                )}
                               </div>
+
+                              {/* Panelists */}
+                              {panelists.length > 0 && (
+                                <div className="flex items-center gap-1.5 flex-wrap mt-2.5">
+                                  <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1 mr-0.5">
+                                    <Clock size={11} /> Panel:
+                                  </span>
+                                  {panelists.map((p, idx) => (
+                                    <span
+                                      key={idx}
+                                      className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border ${p.badgeClass}`}
+                                    >
+                                      <span>{p.icon}</span>
+                                      <span>{p.name}</span>
+                                      <span className="text-[9px] opacity-80 uppercase font-bold">
+                                        ({p.role})
+                                      </span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
                               {iv.notes && (
-                                <p className="text-xs text-gray-500 mt-1.5 italic">"{iv.notes}"</p>
+                                <p className="text-xs text-gray-500 mt-2 italic bg-gray-50 px-2.5 py-1 rounded border border-gray-100">
+                                  "{iv.notes}"
+                                </p>
                               )}
                             </div>
                           </div>

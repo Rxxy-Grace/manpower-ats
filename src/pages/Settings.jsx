@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Save,
   RefreshCw,
@@ -19,6 +19,8 @@ import {
   Lock,
   KeyRound,
   ShieldCheck,
+  User,
+  Pencil,
 } from 'lucide-react'
 import { useApp, SYSTEM_ROLES } from '../context/AppContext'
 import Button from '../components/ui/Button'
@@ -27,7 +29,7 @@ import { isSupabaseConfigured } from '../lib/supabase'
 import { syncLocalStateToSupabase } from '../services/supabaseSync'
 
 export default function Settings() {
-  const { state, dispatch, currentUser, userRoleConfig, hasPermission, updateUserPin } = useApp()
+  const { state, dispatch, currentUser, userRoleConfig, hasPermission, updateUserPin, updateUserProfile } = useApp()
   const canDangerZone = hasPermission('canAccessDangerZone')
 
   const [form, setForm] = useState({ ...state.settings })
@@ -41,6 +43,40 @@ export default function Settings() {
   const [pinTargetUser, setPinTargetUser] = useState(currentUser?.id || 'u_admin')
   const [pinSuccess, setPinSuccess] = useState('')
   const [pinError, setPinError] = useState('')
+
+  // Profile change state
+  const [profileTargetUser, setProfileTargetUser] = useState(currentUser?.id || 'u_admin')
+  const initialTarget = (state.authUsers || []).find(u => u.id === (currentUser?.id || 'u_admin'))
+  const [profName, setProfName] = useState(initialTarget?.name || '')
+  const [profTitle, setProfTitle] = useState(initialTarget?.title || '')
+  const [profEmail, setProfEmail] = useState(initialTarget?.email || '')
+  const [profAvatar, setProfAvatar] = useState(initialTarget?.avatar || '')
+  const [profileSuccess, setProfileSuccess] = useState('')
+
+  useEffect(() => {
+    const target = (state.authUsers || []).find(u => u.id === profileTargetUser)
+    if (target) {
+      setProfName(target.name || '')
+      setProfTitle(target.title || '')
+      setProfEmail(target.email || '')
+      setProfAvatar(target.avatar || '')
+    }
+  }, [profileTargetUser, state.authUsers])
+
+  const handleUpdateProfile = (e) => {
+    e.preventDefault()
+    if (!profName.trim()) return
+    const initials = profAvatar.trim() || profName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+    updateUserProfile({
+      id: profileTargetUser,
+      name: profName.trim(),
+      title: profTitle.trim(),
+      email: profEmail.trim(),
+      avatar: initials,
+    })
+    setProfileSuccess(`Profile updated successfully!`)
+    setTimeout(() => setProfileSuccess(''), 3000)
+  }
 
   const handleUpdatePin = (e) => {
     e.preventDefault()
@@ -471,6 +507,108 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
                 </div>
               ))}
             </dl>
+          </div>
+
+          {/* User Profile Management */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
+              <User size={18} className="text-blue-600" />
+              <h3 className="text-sm font-bold text-gray-900">User Profile Details</h3>
+            </div>
+
+            <form onSubmit={handleUpdateProfile} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Select User Account
+                </label>
+                <select
+                  value={profileTargetUser}
+                  onChange={e => setProfileTargetUser(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs bg-white text-gray-800"
+                >
+                  {(state.authUsers || []).map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Full Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profName}
+                  onChange={e => setProfName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs"
+                  placeholder="e.g. Dr. Somchai (PTTEP Reviewer)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Job Title / Subtitle *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={profTitle}
+                  onChange={e => setProfTitle(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs"
+                  placeholder="e.g. Hiring Manager · PTTEP Myanmar"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={profEmail}
+                    onChange={e => setProfEmail(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Initials
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={3}
+                    value={profAvatar}
+                    onChange={e => setProfAvatar(e.target.value.toUpperCase())}
+                    className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs uppercase font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                    {profAvatar || profName.slice(0, 2).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-xs text-gray-500">Avatar Preview</span>
+                </div>
+                <button
+                  type="submit"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                >
+                  Save Profile
+                </button>
+              </div>
+
+              {profileSuccess && (
+                <p className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
+                  ✓ {profileSuccess}
+                </p>
+              )}
+            </form>
           </div>
 
           {/* Security & PIN Management */}

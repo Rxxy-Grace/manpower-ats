@@ -47,7 +47,12 @@ export default function Candidates() {
     if (currentBranch !== 'ALL' && job && job.branch !== currentBranch) return false
 
     // Client filter
-    if (currentClient !== 'ALL' && job && job.clientCompany !== currentClient) return false
+    if (currentClient !== 'ALL' && job) {
+      const matchClient = job.clientCompany === currentClient ||
+        (currentClient === 'HQS (Headquarter & Branches)' && (job.hiringType === 'internal' || job.clientCompany?.toLowerCase().includes('hqs'))) ||
+        (currentClient === 'HQS' && (job.hiringType === 'internal' || job.clientCompany?.toLowerCase().includes('hqs')))
+      if (!matchClient) return false
+    }
 
     // Stage filter
     if (filterStage && c.stage !== filterStage) return false
@@ -252,8 +257,9 @@ export default function Candidates() {
             currentClient !== 'ALL' ? 'border-indigo-400 bg-indigo-50/50 text-indigo-900' : 'border-gray-300'
           }`}
         >
-          <option value="ALL">All Clients (PTTEP, SLB, POSCO)</option>
-          {CLIENT_COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="ALL">All Organizations & Clients</option>
+          <option value="HQS (Headquarter & Branches)">🏢 HQS (Headquarter & Branches) — Internal</option>
+          {CLIENT_COMPANIES.filter(c => !c.includes('HQS')).map(c => <option key={c} value={c}>🌐 {c} (Client)</option>)}
         </select>
 
         {/* Global Branch Filter */}

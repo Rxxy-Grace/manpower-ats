@@ -112,8 +112,28 @@ export const DEFAULT_USERS = [
 
 const AppContext = createContext(null)
 
+export function normalizeJob(job) {
+  if (!job) return job
+  const isInternal = job.hiringType === 'internal' ||
+    (job.clientCompany && (
+      job.clientCompany === 'HQS (Headquarter & Branches)' ||
+      job.clientCompany.toLowerCase().includes('hqs') ||
+      job.clientCompany === 'Headquarter'
+    ))
+  return {
+    ...job,
+    hiringType: isInternal ? 'internal' : (job.hiringType || 'client'),
+    clientCompany: isInternal
+      ? (job.clientCompany && job.clientCompany.toLowerCase().includes('hqs') ? job.clientCompany : 'HQS (Headquarter & Branches)')
+      : (job.clientCompany || 'PTTEP'),
+    hiringManager: job.hiringManager || (isInternal ? 'General Administration Manager' : 'PTTEP Maintenance Superintendent'),
+    reviewer: job.reviewer || (isInternal ? 'Daw Hla Hla Win (Head of HR & Admin)' : 'Dr. Somchai (Department Head Reviewer)'),
+    approvalPerson: job.approvalPerson || 'Daw Hnin Yu Maw (Managing Director)',
+  }
+}
+
 const initialState = {
-  jobs: seedJobs,
+  jobs: seedJobs.map(normalizeJob),
   candidates: seedCandidates,
   interviews: seedInterviews,
   team: seedTeam,
@@ -130,7 +150,7 @@ const initialState = {
     exchangeRate: 3500,       // 1 USD = X MMK
     timezone: 'Asia/Yangon',
     currentBranch: 'ALL',     // 'ALL', 'HQS', 'AQS', 'QSL'
-    currentClient: 'ALL',     // 'ALL', 'PTTEP', 'SLB', 'POSCO'
+    currentClient: 'ALL',     // 'ALL', 'HQS (Headquarter & Branches)', 'PTTEP', 'SLB', 'POSCO'
     currentUser: 'u_admin',
   },
 }
@@ -180,11 +200,61 @@ function reducer(state, action) {
       }
     }
 
+    case 'UPDATE_USER_PROFILE': {
+      const { id, name, title, email, avatar } = action.payload
+      const updatedUsers = (state.authUsers || []).map(u => (
+        u.id === id
+          ? {
+              ...u,
+              name: name !== undefined ? name : u.name,
+              title: title !== undefined ? title : u.title,
+              email: email !== undefined ? email : u.email,
+              avatar: avatar !== undefined ? avatar : u.avatar,
+            }
+          : u
+      ))
+      const updatedAuthUser = state.auth.user?.id === id
+        ? {
+            ...state.auth.user,
+            name: name !== undefined ? name : state.auth.user.name,
+            title: title !== undefined ? title : state.auth.user.title,
+            email: email !== undefined ? email : state.auth.user.email,
+            avatar: avatar !== undefined ? avatar : state.auth.user.avatar,
+          }
+        : state.auth.user
+      return {
+        ...state,
+        authUsers: updatedUsers,
+        auth: {
+          ...state.auth,
+          user: updatedAuthUser,
+        },
+      }
+    }
+
     // ── JOBS ──────────────────────────────────────────────
-    case 'ADD_JOB':
-      return { ...state, jobs: [...state.jobs, { ...action.payload, id: generateId('j'), postedAt: new Date().toISOString().split('T')[0], applicantCount: 0 }] }
-    case 'UPDATE_JOB':
-      return { ...state, jobs: state.jobs.map(j => j.id === action.payload.id ? { ...j, ...action.payload } : j) }
+    case 'ADD_JOB': {
+      const normalized = normalizeJob(action.payload)
+      return {
+        ...state,
+        jobs: [
+          {
+            ...normalized,
+            id: generateId('j'),
+            postedAt: action.payload.postedAt || new Date().toISOString().split('T')[0],
+            applicantCount: 0,
+          },
+          ...state.jobs,
+        ],
+      }
+    }
+    case 'UPDATE_JOB': {
+      const normalized = normalizeJob(action.payload)
+      return {
+        ...state,
+        jobs: state.jobs.map(j => (j.id === action.payload.id ? { ...j, ...normalized } : j)),
+      }
+    }
     case 'DELETE_JOB':
       return { ...state, jobs: state.jobs.filter(j => j.id !== action.payload) }
 
@@ -313,7 +383,7 @@ function reducer(state, action) {
     case 'RESET_DEMO_DATA':
       return {
         ...initialState,
-        jobs: seedJobs,
+        jobs: seedJobs.map(normalizeJob),
         candidates: seedCandidates,
         interviews: seedInterviews,
         team: seedTeam,
@@ -336,9 +406,10 @@ function loadState() {
       const candidates = (Array.isArray(parsed.candidates) && parsed.candidates.length > 0)
         ? parsed.candidates
         : seedCandidates
-      const jobs = (Array.isArray(parsed.jobs) && parsed.jobs.length > 0)
+      const rawJobs = (Array.isArray(parsed.jobs) && parsed.jobs.length > 0)
         ? parsed.jobs
         : seedJobs
+      const jobs = rawJobs.map(normalizeJob)
       const hasBurmese = parsed.emailTemplates?.some(t => /[\u1000-\u109F]/.test(t.body || ''))
       const emailTemplates = (!parsed.emailTemplates || parsed.emailTemplates.length === 0 || hasBurmese)
         ? seedEmailTemplates
@@ -452,6 +523,10 @@ export function AppProvider({ children }) {
     dispatch({ type: 'UPDATE_USER_PIN', payload: { userId, newPin } })
   }, [])
 
+  const updateUserProfile = useCallback((profileData) => {
+    dispatch({ type: 'UPDATE_USER_PROFILE', payload: profileData })
+  }, [])
+
   const currentUser = state.auth?.user || null
   const currentRole = currentUser?.role || 'admin'
   const userRoleConfig = SYSTEM_ROLES[currentRole] || SYSTEM_ROLES.admin
@@ -464,10 +539,11 @@ export function AppProvider({ children }) {
     login,
     logout,
     updateUserPin,
+    updateUserProfile,
     currentUser,
     userRoleConfig,
     hasPermission,
-  }), [state, login, logout, updateUserPin, currentUser, userRoleConfig, hasPermission])
+  }), [state, login, logout, updateUserPin, updateUserProfile, currentUser, userRoleConfig, hasPermission])
 
   return (
     <AppContext.Provider value={value}>

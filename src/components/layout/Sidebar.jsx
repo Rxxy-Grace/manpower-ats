@@ -34,7 +34,10 @@ export default function Sidebar() {
   // Filter jobs matching current branch & client
   const filteredJobs = state.jobs.filter(j => {
     const matchBranch = currentBranch === 'ALL' || j.branch === currentBranch
-    const matchClient = currentClient === 'ALL' || j.clientCompany === currentClient
+    const matchClient = currentClient === 'ALL' ||
+      j.clientCompany === currentClient ||
+      (currentClient === 'HQS (Headquarter & Branches)' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs'))) ||
+      (currentClient === 'HQS' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs')))
     return matchBranch && matchClient
   })
   const filteredJobIds = new Set(filteredJobs.map(j => j.id))
@@ -149,31 +152,35 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Client Companies interactive filter */}
+      {/* Organizations & Clients interactive filter */}
       <div className="px-5 py-3 border-b border-gray-800">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Client Companies</p>
+          <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Organizations & Clients</p>
           {currentClient !== 'ALL' && (
             <button
               type="button"
               onClick={() => handleClientClick('ALL')}
               className="text-[10px] text-blue-400 hover:text-blue-300 underline cursor-pointer"
             >
-              All Clients
+              Reset All
             </button>
           )}
         </div>
         <div className="space-y-1">
           {[
-            { id: 'ALL', name: 'All Clients', sub: 'All Corporate Partners' },
+            { id: 'ALL', name: 'All Organizations', sub: 'Clients & HQS Internal' },
+            { id: 'HQS (Headquarter & Branches)', name: '🏢 HQS Group (Internal)', sub: 'Headquarter & Branches' },
             { id: 'PTTEP', name: 'PTTEP', sub: 'Offshore Exploration' },
             { id: 'SLB', name: 'SLB (Schlumberger)', sub: 'Oilfield Services' },
             { id: 'POSCO', name: 'POSCO International', sub: 'Gas Pipeline' },
           ].map(client => {
             const count = client.id === 'ALL'
               ? state.jobs.length
+              : client.id === 'HQS (Headquarter & Branches)'
+              ? state.jobs.filter(j => j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs') || j.clientCompany === 'HQS (Headquarter & Branches)').length
               : state.jobs.filter(j => j.clientCompany === client.id).length
-            const isSelected = currentClient === client.id
+            const isSelected = currentClient === client.id ||
+              (client.id === 'HQS (Headquarter & Branches)' && currentClient === 'HQS')
             return (
               <button
                 key={client.id}

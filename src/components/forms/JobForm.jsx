@@ -9,6 +9,8 @@ import {
   BRANCHES,
   STANDARD_LOCATIONS,
   CONTRACT_DURATIONS,
+  HIRING_TYPES,
+  HQS_INTERNAL_ENTITIES,
 } from '../../data/seedData'
 import { useApp } from '../../context/AppContext'
 import {
@@ -139,18 +141,35 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
   const { state } = useApp()
   const submitFn = onSubmit || onSave
 
+  const isInitialInternal = initial.hiringType === 'internal' ||
+    (initial.clientCompany && (
+      initial.clientCompany === 'HQS (Headquarter & Branches)' ||
+      initial.clientCompany.toLowerCase().includes('hqs') ||
+      initial.clientCompany === 'Headquarter'
+    ))
+
   const [form, setForm] = useState({
     code: initial.code || '',
     title: initial.title || '',
     department: initial.department || '',
     employmentType: initial.employmentType || 'Permanent Worker',
     contractDuration: initial.contractDuration || '',
-    clientCompany: initial.clientCompany || 'PTTEP',
+    hiringType: isInitialInternal ? 'internal' : (initial.hiringType || 'client'),
+    clientCompany: isInitialInternal ? 'HQS (Headquarter & Branches)' : (initial.clientCompany || 'PTTEP'),
+    internalEntity: initial.internalEntity || (
+      initial.branch === 'AQS'
+        ? 'AQS Branch (Internal)'
+        : initial.branch === 'QSL'
+        ? 'QSL Branch (Internal)'
+        : 'HQS Corporate Headquarter (Yangon)'
+    ),
     branch: initial.branch || (state.settings.currentBranch !== 'ALL' ? state.settings.currentBranch : 'HQS'),
     location: initial.location || '',
     status: initial.status || 'Open',
     recruiter: initial.recruiter || state.team[0]?.id || 't1',
     hiringManager: initial.hiringManager || '',
+    reviewer: initial.reviewer || '',
+    approvalPerson: initial.approvalPerson || '',
     postedAt: initial.postedAt || new Date().toISOString().split('T')[0],
     closingDate: initial.closingDate || '',
     headcount: initial.headcount || 1,
@@ -196,12 +215,87 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
 
-      {/* ── Panel 1: Requisition & Client Account ── */}
-      <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-          <Building2 size={14} className="text-blue-600" />
-          1. Requisition & Client Account
-        </h4>
+      {/* ── Panel 1: Requisition & Organization Account ── */}
+      <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 space-y-3.5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <Building2 size={14} className="text-blue-600" />
+            1. Requisition & Organization Type
+          </h4>
+          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-800 flex items-center gap-1">
+            {form.hiringType === 'internal' ? '🏢 HQS Group (Internal)' : '🌐 External Client Partner'}
+          </span>
+        </div>
+
+        {/* Dual Selection: Client Company vs HQS Headquarter & Branches */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+            Hiring Organization Option <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setForm(f => ({
+                  ...f,
+                  hiringType: 'client',
+                  clientCompany: f.clientCompany === 'HQS (Headquarter & Branches)' ? 'PTTEP' : f.clientCompany,
+                }))
+              }}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                form.hiringType === 'client'
+                  ? 'bg-indigo-50/80 border-indigo-400 ring-2 ring-indigo-200 shadow-xs'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg shrink-0 ${form.hiringType === 'client' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                <Building2 size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-bold ${form.hiringType === 'client' ? 'text-indigo-900' : 'text-gray-800'}`}>
+                    Client Company (Corporate Partner)
+                  </span>
+                  {form.hiringType === 'client' && <Check size={14} className="text-indigo-600 shrink-0" />}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                  Recruiting for external corporate clients (PTTEP, SLB, POSCO, etc.)
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setForm(f => ({
+                  ...f,
+                  hiringType: 'internal',
+                  clientCompany: 'HQS (Headquarter & Branches)',
+                }))
+              }}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-2.5 ${
+                form.hiringType === 'internal'
+                  ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-200 shadow-xs'
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg shrink-0 ${form.hiringType === 'internal' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                <Briefcase size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-bold ${form.hiringType === 'internal' ? 'text-blue-900' : 'text-gray-800'}`}>
+                    HQS Group (Headquarter & Branches)
+                  </span>
+                  {form.hiringType === 'internal' && <Check size={14} className="text-blue-600 shrink-0" />}
+                </div>
+                <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                  Internal positions for HQS Corporate Headquarter, AQS, or QSL Branch
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
@@ -212,7 +306,7 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
             <input
               value={form.code}
               onChange={e => set('code', e.target.value)}
-              placeholder="e.g. HR-1287, PMB-BMS-01"
+              placeholder={form.hiringType === 'internal' ? 'e.g. HQS-HR-2026' : 'e.g. HR-1287'}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold bg-white text-gray-900"
             />
           </div>
@@ -230,19 +324,38 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-              Client Company <span className="text-red-500">*</span>
-            </label>
-            <select
-              required
-              value={form.clientCompany}
-              onChange={e => set('clientCompany', e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium"
-            >
-              {CLIENT_COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
+          {form.hiringType === 'internal' ? (
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-blue-900 mb-1.5 flex items-center gap-1">
+                🏛️ HQS Headquarter / Branch Entity <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={form.internalEntity}
+                onChange={e => {
+                  const val = e.target.value
+                  const branch = val.includes('AQS') ? 'AQS' : val.includes('QSL') ? 'QSL' : 'HQS'
+                  setForm(f => ({ ...f, internalEntity: val, branch }))
+                }}
+                className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-blue-50/50 font-semibold text-blue-900"
+              >
+                {HQS_INTERNAL_ENTITIES.map(ent => (
+                  <option key={ent} value={ent}>{ent}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <Combobox
+                label="Client Company"
+                required={true}
+                value={form.clientCompany}
+                onChange={val => set('clientCompany', val)}
+                options={CLIENT_COMPANIES.filter(c => !c.includes('HQS'))}
+                placeholder="Select or type client name…"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
@@ -254,7 +367,7 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
               onChange={e => set('branch', e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium"
             >
-              {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+              {BRANCHES.map(b => <option key={b} value={b}>{b} Branch</option>)}
             </select>
           </div>
 
@@ -337,14 +450,22 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
         )
       })()}
 
-      {/* ── Panel 3: Ownership, Headcount & Schedule Dates ── */}
+      {/* ── Panel 3: Ownership, Review & Approval Panel ── */}
       <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 space-y-3">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-          <UserCheck size={14} className="text-blue-600" />
-          3. Ownership, Headcount & Key Dates
-        </h4>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <UserCheck size={14} className="text-blue-600" />
+            3. Ownership, Review & Approval Panel
+          </h4>
+          <span className="text-[10px] bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+            🔗 Included in Interview Schedule Panels
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Specify the decision-makers for this position. The Hiring Manager, Reviewer (Department Head), and Approval Authority will automatically be populated as available interview panelists.
+        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Recruiter Assigned */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
@@ -366,18 +487,61 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
 
           {/* Hiring Manager */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
-              Hiring Manager
-            </label>
-            <input
+            <Combobox
+              label="👔 Hiring Manager"
               value={form.hiringManager}
-              onChange={e => set('hiringManager', e.target.value)}
-              placeholder="e.g. General Administration Manager"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              onChange={val => set('hiringManager', val)}
+              options={[
+                'PTTEP Maintenance Superintendent',
+                'PTTEP C&P Methods Lead',
+                'Head of Engineering & Construction',
+                'Offshore Construction Superintendent',
+                'General Administration Manager',
+                'Operations Lead (HQS Yangon)',
+                'AQS Branch Manager',
+                'QSL Operations Manager',
+              ]}
+              placeholder="e.g. Operations Lead / Manager"
             />
           </div>
 
-          {/* Headcount Required */}
+          {/* Reviewer (Department Head) */}
+          <div>
+            <Combobox
+              label="📑 Reviewer (Dept Head)"
+              value={form.reviewer}
+              onChange={val => set('reviewer', val)}
+              options={[
+                'Dr. Somchai (PTTEP Reviewer)',
+                'Daw Hla Hla Win (Head of HR & Admin)',
+                'Head of Engineering Department',
+                'SSHE Department Head',
+                'Offshore Maintenance Reviewer',
+                'Finance & Accounting Dept Head',
+              ]}
+              placeholder="e.g. Dr. Somchai / Dept Head"
+            />
+          </div>
+
+          {/* Approval Person */}
+          <div>
+            <Combobox
+              label="✍️ Approval Person"
+              value={form.approvalPerson}
+              onChange={val => set('approvalPerson', val)}
+              options={[
+                'Daw Hnin Yu Maw (Managing Director)',
+                'Daw Hla Hla Win (Lead Admin & Director)',
+                'PTTEP Asset Director & HQS MD',
+                'Executive Committee Board',
+              ]}
+              placeholder="e.g. Daw Hnin Yu Maw (MD)"
+            />
+          </div>
+        </div>
+
+        {/* Headcount, Posted Date, Closing Date */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-200">
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
               <Users size={12} className="text-gray-400" />
@@ -392,7 +556,6 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
             />
           </div>
 
-          {/* Posted Date */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
               <Calendar size={12} className="text-gray-400" />
@@ -406,7 +569,6 @@ export default function JobForm({ initial = {}, onSubmit, onSave, onCancel }) {
             />
           </div>
 
-          {/* Closing Date */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 flex items-center gap-1">
               <Calendar size={12} className="text-gray-400" />

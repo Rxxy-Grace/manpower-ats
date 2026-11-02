@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Search, Bell, Plus, X, LogOut, Shield, Lock } from 'lucide-react'
+import { Search, Bell, Plus, X, LogOut, Shield, Lock, Pencil, Check } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
+import Modal from '../ui/Modal'
+import Button from '../ui/Button'
 
 const pageTitles = {
   '/': 'Dashboard',
@@ -16,10 +18,52 @@ const pageTitles = {
 export default function TopBar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { state, dispatch, logout, currentUser, userRoleConfig } = useApp()
+  const { state, dispatch, logout, currentUser, userRoleConfig, updateUserProfile } = useApp()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [showResults, setShowResults] = useState(false)
+
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    title: '',
+    email: '',
+    avatar: '',
+  })
+  const [profileSaved, setProfileSaved] = useState(false)
+
+  const openProfileModal = () => {
+    if (currentUser) {
+      setProfileForm({
+        name: currentUser.name || '',
+        title: currentUser.title || '',
+        email: currentUser.email || '',
+        avatar: currentUser.avatar || '',
+      })
+      setProfileSaved(false)
+      setShowProfileModal(true)
+    }
+  }
+
+  const handleSaveProfile = (e) => {
+    e.preventDefault()
+    if (!currentUser) return
+    const initials = profileForm.avatar.trim() ||
+      profileForm.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'
+
+    updateUserProfile({
+      id: currentUser.id,
+      name: profileForm.name.trim(),
+      title: profileForm.title.trim(),
+      email: profileForm.email.trim(),
+      avatar: initials,
+    })
+    setProfileSaved(true)
+    setTimeout(() => {
+      setProfileSaved(false)
+      setShowProfileModal(false)
+    }, 600)
+  }
 
   const currentBranch = state.settings.currentBranch || 'ALL'
   const currentClient = state.settings.currentClient || 'ALL'
@@ -200,7 +244,7 @@ export default function TopBar() {
           )}
           {currentClient !== 'ALL' && (
             <span className="inline-flex items-center gap-1 bg-white border border-indigo-300 text-indigo-800 font-bold px-2 py-0.5 rounded shadow-2xs">
-              {currentClient}
+              {currentClient === 'HQS (Headquarter & Branches)' ? '🏢 HQS Internal' : currentClient}
               <button
                 type="button"
                 onClick={() => dispatch({ type: 'SET_CLIENT_FILTER', payload: 'ALL' })}
@@ -223,17 +267,29 @@ export default function TopBar() {
 
       <div className="ml-auto flex items-center gap-3">
         {currentUser && (
-          <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-              {currentUser.avatar}
+          <button
+            type="button"
+            onClick={openProfileModal}
+            className="flex items-center gap-2 pl-3 border-l border-gray-200 hover:bg-gray-100/80 px-2 py-1.5 rounded-xl transition-all cursor-pointer text-left group"
+            title="Click to edit profile"
+          >
+            <div className="relative">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs group-hover:ring-2 group-hover:ring-blue-400 transition-all">
+                {currentUser.avatar}
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-2xs border border-gray-200 text-gray-500 group-hover:text-blue-600 group-hover:border-blue-300 transition-colors">
+                <Pencil size={9} />
+              </div>
             </div>
             <div className="hidden sm:block text-left">
-              <span className="text-xs font-bold text-gray-900 block leading-tight">{currentUser.name}</span>
+              <span className="text-xs font-bold text-gray-900 block leading-tight group-hover:text-blue-700 transition-colors">
+                {currentUser.name}
+              </span>
               <p className="text-[10px] text-gray-500 leading-none mt-0.5">
                 {currentUser.title || 'Managing Director'}
               </p>
             </div>
-          </div>
+          </button>
         )}
 
         <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer">
@@ -241,6 +297,95 @@ export default function TopBar() {
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
         </button>
       </div>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        title="Edit Profile"
+        size="sm"
+      >
+        <form onSubmit={handleSaveProfile} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={profileForm.name}
+              onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="e.g. Dr. Somchai"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Job Title / Organization *
+            </label>
+            <input
+              type="text"
+              required
+              value={profileForm.title}
+              onChange={e => setProfileForm({ ...profileForm, title: e.target.value })}
+              placeholder="e.g. Hiring Manager · PTTEP Myanmar"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={profileForm.email}
+              onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="name@company.com"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 items-end">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Avatar Initials (max 3 chars)
+              </label>
+              <input
+                type="text"
+                maxLength={3}
+                value={profileForm.avatar}
+                onChange={e => setProfileForm({ ...profileForm, avatar: e.target.value.toUpperCase() })}
+                placeholder="SC"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm uppercase font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2.5 pb-1">
+              <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                {profileForm.avatar || profileForm.name.slice(0, 2).toUpperCase() || 'U'}
+              </div>
+              <span className="text-xs text-gray-500">Preview</span>
+            </div>
+          </div>
+
+          {profileSaved && (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs rounded-lg flex items-center gap-2 font-medium">
+              <Check size={14} className="text-emerald-600 shrink-0" />
+              <span>Profile updated successfully!</span>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+            <Button variant="secondary" type="button" onClick={() => setShowProfileModal(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              Save Changes
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </header>
   )
 }

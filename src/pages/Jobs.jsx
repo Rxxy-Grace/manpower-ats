@@ -45,6 +45,8 @@ export default function Jobs() {
         j.employmentType,
         j.status,
         j.hiringManager,
+        j.reviewer,
+        j.approvalPerson,
         j.description,
         ...(j.requirements || []),
       ].filter(Boolean).join(' ').toLowerCase()
@@ -55,7 +57,10 @@ export default function Jobs() {
     const matchDept = !filterDept || j.department === filterDept
     const matchStatus = !filterStatus || j.status === filterStatus
     const matchBranch = currentBranch === 'ALL' || j.branch === currentBranch
-    const matchClient = currentClient === 'ALL' || j.clientCompany === currentClient
+    const matchClient = currentClient === 'ALL' ||
+      j.clientCompany === currentClient ||
+      (currentClient === 'HQS (Headquarter & Branches)' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs'))) ||
+      (currentClient === 'HQS' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs')))
     return matchSearch && matchDept && matchStatus && matchBranch && matchClient
   })
 
@@ -96,6 +101,7 @@ export default function Jobs() {
   }
 
   const clientBadgeColor = {
+    'HQS (Headquarter & Branches)': 'bg-blue-100 text-blue-800 border-blue-300 font-bold',
     PTTEP: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     SLB: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     POSCO: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -205,8 +211,9 @@ export default function Jobs() {
             currentClient !== 'ALL' ? 'border-indigo-400 bg-indigo-50/50 text-indigo-900' : 'border-gray-300'
           }`}
         >
-          <option value="ALL">All Clients (PTTEP, SLB, POSCO)</option>
-          {CLIENT_COMPANIES.map(c => <option key={c} value={c}>{c}</option>)}
+          <option value="ALL">All Organizations & Clients</option>
+          <option value="HQS (Headquarter & Branches)">🏢 HQS (Headquarter & Branches) — Internal</option>
+          {CLIENT_COMPANIES.filter(c => !c.includes('HQS')).map(c => <option key={c} value={c}>🌐 {c} (Client)</option>)}
         </select>
 
         {/* Branch dropdown connected to global state */}
@@ -276,11 +283,15 @@ export default function Jobs() {
                         {job.code}
                       </span>
                     )}
-                    {job.clientCompany && (
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded border ${clientBadgeColor[job.clientCompany] || 'bg-gray-100 text-gray-700'}`}>
-                        {job.clientCompany}
+                    {job.hiringType === 'internal' || job.clientCompany?.toLowerCase().includes('hqs') ? (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded border bg-blue-100 text-blue-800 border-blue-300 flex items-center gap-1 shadow-2xs">
+                        🏢 HQS Internal
                       </span>
-                    )}
+                    ) : job.clientCompany ? (
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded border ${clientBadgeColor[job.clientCompany] || 'bg-gray-100 text-gray-700'}`}>
+                        🌐 {job.clientCompany}
+                      </span>
+                    ) : null}
                     {job.branch && (
                       <span className={`text-xs font-bold px-2 py-0.5 rounded border ${branchBadgeColor[job.branch] || 'bg-gray-100 text-gray-700'}`}>
                         {job.branch} Branch
@@ -304,7 +315,22 @@ export default function Jobs() {
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                {/* Governance preview */}
+                {(job.hiringManager || job.reviewer || job.approvalPerson) && (
+                  <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500 flex-wrap gap-1">
+                    <span title={`Hiring Manager: ${job.hiringManager || 'N/A'}`} className="truncate max-w-[110px]">
+                      👔 <span className="text-gray-700 font-medium">{job.hiringManager || '—'}</span>
+                    </span>
+                    <span title={`Reviewer: ${job.reviewer || 'N/A'}`} className="truncate max-w-[110px]">
+                      📑 <span className="text-gray-700 font-medium">{job.reviewer || '—'}</span>
+                    </span>
+                    <span title={`Approval: ${job.approvalPerson || 'N/A'}`} className="truncate max-w-[110px]">
+                      ✍️ <span className="text-gray-700 font-medium">{job.approvalPerson || '—'}</span>
+                    </span>
+                  </div>
+                )}
+
+                <div className="mt-2.5 pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
                   <div className="flex items-center gap-1">
                     <MapPin size={13} className="text-gray-400 shrink-0" />
                     <span className="truncate max-w-[130px]">{job.location}</span>

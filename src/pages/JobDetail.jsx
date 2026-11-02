@@ -87,11 +87,15 @@ export default function JobDetail() {
                   {job.code}
                 </span>
               )}
-              {job.clientCompany && (
-                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded">
-                  {job.clientCompany}
+              {job.hiringType === 'internal' || job.clientCompany?.toLowerCase().includes('hqs') ? (
+                <span className="text-xs font-bold text-blue-800 bg-blue-100 border border-blue-300 px-2.5 py-0.5 rounded flex items-center gap-1 shadow-2xs">
+                  🏢 HQS Group (Internal)
                 </span>
-              )}
+              ) : job.clientCompany ? (
+                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded">
+                  🌐 Client: {job.clientCompany}
+                </span>
+              ) : null}
               {job.branch && (
                 <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded">
                   {job.branch} Branch
@@ -149,20 +153,43 @@ export default function JobDetail() {
             <p className="text-sm font-medium">{job.headcount ? `${job.headcount} ${job.headcount === 1 ? 'position' : 'positions'}` : '1 position'}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400 mb-1">Hiring Manager</p>
-            <p className="text-sm font-medium">{job.hiringManager || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Recruiter Assigned</p>
-            <p className="text-sm font-medium text-blue-700 font-semibold">{recruiter?.name || '—'}</p>
-          </div>
-          <div>
             <p className="text-xs text-gray-400 mb-1">Posted Date</p>
             <p className="text-sm font-medium">{job.postedAt || '—'}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-1">Closing Date</p>
             <p className="text-sm font-medium">{job.closingDate || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-400 mb-1">Recruiter Assigned</p>
+            <p className="text-sm font-medium text-blue-700 font-semibold">{recruiter?.name || '—'}</p>
+          </div>
+        </div>
+
+        {/* Governance & Review Panel */}
+        <div className="mt-5 pt-4 border-t border-gray-100 bg-slate-50/70 -mx-6 -mb-6 p-6 rounded-b-xl">
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <span>🔗 Position Governance & Interview Panel</span>
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white p-3 rounded-lg border border-indigo-100 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 block leading-none">
+                👔 Hiring Manager
+              </span>
+              <p className="text-sm font-bold text-gray-900 mt-1">{job.hiringManager || 'Not Assigned'}</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-purple-100 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 block leading-none">
+                📑 Reviewer (Department Head)
+              </span>
+              <p className="text-sm font-bold text-gray-900 mt-1">{job.reviewer || 'Not Assigned'}</p>
+            </div>
+            <div className="bg-white p-3 rounded-lg border border-emerald-100 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block leading-none">
+                ✍️ Approval Person
+              </span>
+              <p className="text-sm font-bold text-gray-900 mt-1">{job.approvalPerson || 'Not Assigned'}</p>
+            </div>
           </div>
         </div>
       </div>

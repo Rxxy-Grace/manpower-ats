@@ -75,8 +75,19 @@ export const STANDARD_LOCATIONS = [
 export const JOB_STATUSES = ['Draft', 'Open', 'Paused', 'Closed']
 export const CURRENCIES = ['MMK', 'USD']
 export const SALARY_RATES = ['Monthly Rate', 'Daily Rate']
-export const CLIENT_COMPANIES = ['PTTEP', 'SLB', 'POSCO']
+export const CLIENT_COMPANIES = ['HQS (Headquarter & Branches)', 'PTTEP', 'SLB', 'POSCO']
 export const BRANCHES = ['HQS', 'AQS', 'QSL']
+
+export const HIRING_TYPES = [
+  { id: 'client', label: 'Client Company', desc: 'Recruiting for an external corporate client' },
+  { id: 'internal', label: 'HQS Headquarter & Branches', desc: 'Internal hiring for HQS Group & branches' },
+]
+
+export const HQS_INTERNAL_ENTITIES = [
+  'HQS Corporate Headquarter (Yangon)',
+  'AQS Branch (Internal)',
+  'QSL Branch (Internal)',
+]
 
 export const seedTeam = [
   {

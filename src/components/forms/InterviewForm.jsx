@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Users, Check } from 'lucide-react'
 import Button from '../ui/Button'
 import { useApp } from '../../context/AppContext'
 
@@ -145,24 +146,135 @@ export default function InterviewForm({ initial = {}, candidateId, jobId, onSubm
         </div>
       </div>
 
-      {/* Interviewers */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Interviewers</label>
-        <div className="flex flex-wrap gap-2">
-          {state.team.map(m => (
+      {/* Interview Panel Section */}
+      <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+            <Users size={14} className="text-blue-600" />
+            Interview Panel Members ({form.interviewers.length} Selected)
+          </label>
+          {job && (job.hiringManager || job.reviewer || job.approvalPerson) && (
             <button
-              key={m.id}
               type="button"
-              onClick={() => toggleInterviewer(m.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                form.interviewers.includes(m.id)
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
-              }`}
+              onClick={() => {
+                const govIds = [
+                  job.hiringManager && `hm:${job.hiringManager}`,
+                  job.reviewer && `rev:${job.reviewer}`,
+                  job.approvalPerson && `appr:${job.approvalPerson}`,
+                ].filter(Boolean)
+                setForm(f => {
+                  const set = new Set([...f.interviewers, ...govIds])
+                  return { ...f, interviewers: Array.from(set) }
+                })
+              }}
+              className="text-[11px] text-blue-600 hover:text-blue-800 font-bold hover:underline cursor-pointer"
             >
-              {m.name}
+              + Select All 3 Key Reviewers
             </button>
-          ))}
+          )}
+        </div>
+
+        {/* 1. Job Review & Approval Governance Panel */}
+        {job && (job.hiringManager || job.reviewer || job.approvalPerson) && (
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+              Position Review & Approval Authorities:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {job.hiringManager && (
+                <button
+                  type="button"
+                  onClick={() => toggleInterviewer(`hm:${job.hiringManager}`)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                    form.interviewers.includes(`hm:${job.hiringManager}`)
+                      ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-400 text-indigo-900'
+                      : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <span className="text-base">👔</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase font-bold text-indigo-600 leading-none">Hiring Manager</p>
+                    <p className="text-xs font-bold truncate mt-0.5">{job.hiringManager}</p>
+                  </div>
+                  {form.interviewers.includes(`hm:${job.hiringManager}`) && (
+                    <Check size={14} className="text-indigo-600 shrink-0" />
+                  )}
+                </button>
+              )}
+
+              {job.reviewer && (
+                <button
+                  type="button"
+                  onClick={() => toggleInterviewer(`rev:${job.reviewer}`)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                    form.interviewers.includes(`rev:${job.reviewer}`)
+                      ? 'bg-purple-50 border-purple-500 ring-1 ring-purple-400 text-purple-900'
+                      : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <span className="text-base">📑</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase font-bold text-purple-600 leading-none">Reviewer (Dept Head)</p>
+                    <p className="text-xs font-bold truncate mt-0.5">{job.reviewer}</p>
+                  </div>
+                  {form.interviewers.includes(`rev:${job.reviewer}`) && (
+                    <Check size={14} className="text-purple-600 shrink-0" />
+                  )}
+                </button>
+              )}
+
+              {job.approvalPerson && (
+                <button
+                  type="button"
+                  onClick={() => toggleInterviewer(`appr:${job.approvalPerson}`)}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                    form.interviewers.includes(`appr:${job.approvalPerson}`)
+                      ? 'bg-emerald-50 border-emerald-500 ring-1 ring-emerald-400 text-emerald-900'
+                      : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  <span className="text-base">✍️</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] uppercase font-bold text-emerald-600 leading-none">Approval Person</p>
+                    <p className="text-xs font-bold truncate mt-0.5">{job.approvalPerson}</p>
+                  </div>
+                  {form.interviewers.includes(`appr:${job.approvalPerson}`) && (
+                    <Check size={14} className="text-emerald-600 shrink-0" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 2. HR Recruitment Team Members */}
+        <div className="space-y-1.5 pt-1">
+          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+            HR Team & Recruiters:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {state.team.map(m => {
+              const isSelected = form.interviewers.includes(m.id)
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggleInterviewer(m.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                  }`}
+                >
+                  <span>👤 {m.name}</span>
+                  <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-gray-400'}`}>
+                    ({m.branch || m.department})
+                  </span>
+                  {isSelected && <Check size={12} className="shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

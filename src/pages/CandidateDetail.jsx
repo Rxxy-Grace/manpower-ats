@@ -12,6 +12,7 @@ import Modal from '../components/ui/Modal'
 import CandidateForm from '../components/forms/CandidateForm'
 import InterviewForm from '../components/forms/InterviewForm'
 import { PIPELINE_STAGES } from '../data/seedData'
+import { resolvePanelist } from './Interviews'
 
 function StarRating({ value, onChange }) {
   const [hover, setHover] = useState(0)
@@ -231,11 +232,15 @@ export default function CandidateDetail() {
                 ['Applied', candidate.appliedAt],
                 ['Location', candidate.location || '—'],
                 ['Job Applied', job?.title || '—'],
+                ['Organization', job?.hiringType === 'internal' || job?.clientCompany?.toLowerCase().includes('hqs') ? '🏢 HQS Group (Internal)' : (job?.clientCompany || '—')],
                 ['Department', job?.department || '—'],
+                ['Hiring Manager', job?.hiringManager || '—'],
+                ['Reviewer (Dept Head)', job?.reviewer || '—'],
+                ['Approval Person', job?.approvalPerson || '—'],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between">
-                  <dt className="text-sm text-gray-500">{label}</dt>
-                  <dd className="text-sm font-medium text-gray-800">{value}</dd>
+                <div key={label} className="flex justify-between items-center py-0.5">
+                  <dt className="text-xs text-gray-500 font-medium">{label}</dt>
+                  <dd className="text-xs font-semibold text-gray-800 text-right">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -300,9 +305,19 @@ export default function CandidateDetail() {
                         📅 {iv.date} at {iv.time} · {iv.duration}min · {iv.location}
                       </p>
                       {iv.interviewers?.length > 0 && (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Interviewers: {iv.interviewers.map(getMemberName).join(', ')}
-                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                          <span className="text-xs text-gray-400 font-medium">Panel:</span>
+                          {iv.interviewers.map(tid => resolvePanelist(tid, state.team)).filter(Boolean).map((p, idx) => (
+                            <span
+                              key={idx}
+                              className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md border ${p.badgeClass}`}
+                            >
+                              <span>{p.icon}</span>
+                              <span>{p.name}</span>
+                              <span className="text-[9px] opacity-80 uppercase font-bold">({p.role})</span>
+                            </span>
+                          ))}
+                        </div>
                       )}
                       {iv.notes && <p className="text-sm text-gray-600 mt-2 italic">"{iv.notes}"</p>}
                     </div>

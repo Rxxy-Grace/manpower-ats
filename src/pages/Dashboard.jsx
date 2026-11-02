@@ -52,7 +52,10 @@ export default function Dashboard() {
   // Filter jobs by currentBranch and currentClient
   const filteredJobs = state.jobs.filter(j => {
     const matchBranch = currentBranch === 'ALL' || j.branch === currentBranch
-    const matchClient = currentClient === 'ALL' || j.clientCompany === currentClient
+    const matchClient = currentClient === 'ALL' ||
+      j.clientCompany === currentClient ||
+      (currentClient === 'HQS (Headquarter & Branches)' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs'))) ||
+      (currentClient === 'HQS' && (j.hiringType === 'internal' || j.clientCompany?.toLowerCase().includes('hqs')))
     return matchBranch && matchClient
   })
   const filteredJobIds = new Set(filteredJobs.map(j => j.id))
