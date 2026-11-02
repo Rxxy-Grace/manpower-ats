@@ -84,8 +84,14 @@ create table if not exists public.team_members (
   phone text default '',
   branch text not null default 'HQS',
   avatar text default '',
+  department text default 'Human Resources',
+  joined_at text default '',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Upgrade existing table if columns were missing
+alter table public.team_members add column if not exists department text default 'Human Resources';
+alter table public.team_members add column if not exists joined_at text default '';
 
 -- Enable Row Level Security (RLS)
 alter table public.jobs enable row level security;

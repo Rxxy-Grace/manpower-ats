@@ -226,3 +226,97 @@ export async function fetchAllFromSupabase() {
     })),
   }
 }
+
+/**
+ * Upsert a single team member to Supabase
+ */
+export async function syncTeamMemberToSupabase(m) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, reason: 'Supabase not configured' }
+  }
+
+  try {
+    const payload = {
+      id: m.id,
+      name: m.name,
+      role: m.role,
+      email: m.email,
+      phone: m.phone || '',
+      branch: m.branch || 'HQS',
+      avatar: m.avatar || '',
+    }
+
+    const { data, error } = await supabase
+      .from('team_members')
+      .upsert(payload, { onConflict: 'id' })
+      .select()
+
+    if (error) {
+      console.error('Supabase team member sync error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, data }
+  } catch (err) {
+    console.error('Supabase team member unexpected error:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Delete a team member from Supabase
+ */
+export async function deleteTeamMemberFromSupabase(id) {
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, reason: 'Supabase not configured' }
+  }
+
+  try {
+    const { error } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('Supabase team member delete error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (err) {
+    console.error('Supabase team member delete unexpected error:', err)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Fetch all team members directly from Supabase
+ */
+export async function fetchTeamFromSupabase() {
+  if (!isSupabaseConfigured || !supabase) return []
+
+  try {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Supabase team fetch error:', error)
+      return []
+    }
+
+    return (data || []).map(m => ({
+      id: m.id,
+      name: m.name,
+      role: m.role,
+      email: m.email,
+      phone: m.phone || '',
+      branch: m.branch || 'HQS',
+      avatar: m.avatar || '',
+    }))
+  } catch (err) {
+    console.error('Supabase team fetch unexpected error:', err)
+    return []
+  }
+}
