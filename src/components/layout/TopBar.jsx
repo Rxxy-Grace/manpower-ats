@@ -292,6 +292,17 @@ export default function TopBar() {
           </button>
         )}
 
+        {/* Lock App / Protect Browser Button */}
+        <button
+          type="button"
+          onClick={logout}
+          title="Lock software (Requires PIN to re-enter)"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:text-red-700 bg-gray-100 hover:bg-red-50 border border-gray-200 hover:border-red-200 rounded-lg transition-all cursor-pointer shadow-2xs"
+        >
+          <Lock size={13} className="text-gray-500" />
+          <span className="hidden sm:inline">Lock App</span>
+        </button>
+
         <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer">
           <Bell size={18} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />

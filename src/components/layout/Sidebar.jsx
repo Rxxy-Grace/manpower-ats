@@ -263,6 +263,14 @@ export default function Sidebar() {
             <p className="text-xs font-bold text-white truncate">{currentUser?.name || 'Daw Hnin Yu Maw'}</p>
             <p className="text-[10px] text-gray-400 truncate">{currentUser?.title || 'Managing Director'}</p>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            title="Lock browser / Protect ATS data"
+            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <Lock size={15} />
+          </button>
         </div>
       </div>
     </aside>

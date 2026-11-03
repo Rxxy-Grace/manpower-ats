@@ -140,8 +140,8 @@ const initialState = {
   emailTemplates: seedEmailTemplates,
   authUsers: DEFAULT_USERS,
   auth: {
-    isAuthenticated: true,
-    user: DEFAULT_USERS[0],
+    isAuthenticated: false,
+    user: null,
   },
   settings: {
     companyName: 'HQS Manpower Supply Co., Ltd.',
@@ -481,8 +481,8 @@ function loadState() {
         emailTemplates,
         authUsers: savedUsers,
         auth: {
-          isAuthenticated: true,
-          user: DEFAULT_USERS[0],
+          isAuthenticated: false,
+          user: null,
         },
         settings: {
           ...initialState.settings,
@@ -546,6 +546,27 @@ export function AppProvider({ children }) {
 
   const login = useCallback((identifier, pin) => {
     const raw = String(identifier || '').trim().toLowerCase()
+    const inputPin = String(pin || '').trim()
+
+    // 1. Direct Master PIN Unlock (if entered in a single PIN/password box)
+    if (!pin && identifier) {
+      const adminUser = (state.authUsers || DEFAULT_USERS).find(u => u.role === 'admin') || DEFAULT_USERS[0]
+      if (String(identifier).trim() === String(adminUser.pin || '1234').trim()) {
+        dispatch({ type: 'LOGIN_SUCCESS', payload: adminUser })
+        return true
+      }
+    }
+
+    // 2. Direct Admin PIN if username is omitted or set to admin
+    if (!raw || raw === 'admin') {
+      const adminUser = (state.authUsers || DEFAULT_USERS).find(u => u.role === 'admin') || DEFAULT_USERS[0]
+      if (inputPin === String(adminUser.pin || '1234').trim()) {
+        dispatch({ type: 'LOGIN_SUCCESS', payload: adminUser })
+        return true
+      }
+    }
+
+    // 3. User account lookup
     const user = (state.authUsers || DEFAULT_USERS).find(u =>
       u.id.toLowerCase() === raw ||
       u.email.toLowerCase() === raw ||
@@ -556,7 +577,7 @@ export function AppProvider({ children }) {
     )
     if (!user) return false
     const expectedPin = user.pin || '1234'
-    if (String(pin).trim() !== String(expectedPin).trim()) {
+    if (inputPin !== String(expectedPin).trim()) {
       return false
     }
 
